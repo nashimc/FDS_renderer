@@ -1,0 +1,8 @@
+.vscode
+*.code-workspace
+*.exe
+*.bat
+*.csv
+*.fds
+*.py
+
