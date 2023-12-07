@@ -28,9 +28,11 @@ template <typename T> Vector3 model_centre(const std::vector<T> *vec);
 template <typename T> float model_length(char axis, const std::vector<T> *vec);
 
 void render_FDS(const std::vector<MESH> &mesh_vec, const std::vector<OBST> &obst_vec, const std::vector<HOLE> &hole_vec);
-void mouse_input(Camera camera);
+
+void mouse_cam_input(bool *user_camera_input, Camera *camera, int *camera_mode);
+void mouse_input();
 void keyboard_input();
-void camera_change(int camera_mode);
+void camera_change(int *camera_mode);
 
 int main(){
     const std::string fds_filepath = "test2.fds";
@@ -46,7 +48,7 @@ int main(){
     SetTraceLogLevel(7);                                        // LOG_ALL: 0, LOG_TRACE: 1, LOG_DEBUG: 2, LOG_INFO: 3, LOG_WARNING: 4, LOG_ERROR: 5, LOG_FATAL: 6, LOG_NONE: 7, 
     InitWindow(WIDTH, HEIGHT, "FDS Renderer");
     
-    DisableCursor();                   
+    EnableCursor();                   
     SetTargetFPS(60);                   
     SetConfigFlags(FLAG_MSAA_4X_HINT);
 
@@ -58,13 +60,19 @@ int main(){
     camera.projection = CAMERA_PERSPECTIVE;
     int camera_mode = CAMERA_THIRD_PERSON;
 
+    // Vector2 prev_mousepos = GetMousePosition();
+    // Vector2 current_mousepos = GetMousePosition();
+    bool user_camera_input = false;
+
     // print_vec(model_centre(&mesh_vec));
 
     while (!WindowShouldClose()){
         
-        UpdateCamera(&camera, camera_mode);
+        if (user_camera_input){
+            UpdateCamera(&camera, camera_mode);
+        }
 
-        mouse_input(camera);
+        mouse_cam_input(&user_camera_input, &camera, &camera_mode);
 
         BeginDrawing();
         
@@ -77,6 +85,7 @@ int main(){
         EndMode3D();
 
         EndDrawing();
+
     }
 
     CloseWindow();
@@ -197,6 +206,7 @@ float model_length(char axis, const std::vector<T> *vec){
 }
 
 // TODO: either mesh or obst is shifted
+// TODO: fix camera on mouse button up
 void render_FDS(const std::vector<MESH> &mesh_vec, const std::vector<OBST> &obst_vec, const std::vector<HOLE> &hole_vec){
     for (const OBST &obst : obst_vec){
             Vector3 position = {(obst.x1 + obst.x2) / 2, (obst.y1 + obst.y2) / 2, (obst.z1 + obst.z2) / 2};
@@ -214,14 +224,30 @@ void render_FDS(const std::vector<MESH> &mesh_vec, const std::vector<OBST> &obst
     }
 }
 
-void mouse_input(Camera camera){
+void mouse_cam_input(bool *user_camera_input, Camera *camera, int *camera_mode){
+    float rotation_speed = 0.2f;
+    if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON)){
+        DisableCursor();
+        *user_camera_input = true;
+        *camera_mode = CAMERA_THIRD_PERSON;
+        camera->target.y = Clamp(camera->target.y, -89.0f, 89.0f);
+    }
+    Camera cameraa = *camera;       // dereference otherwise wierd scroll issue with -> opperator
     int scroll = GetMouseWheelMove();
     if (scroll != 0){
-        float zoom_speed = 5.0f;
-        camera.fovy += static_cast<float>(scroll) * zoom_speed;
-        camera.fovy = Clamp(camera.fovy, 1.0f, 180.0f);
+        DisableCursor();
+        *user_camera_input = true;
+        float zoom_speed = 50.0f;
+        cameraa.fovy += static_cast<float>(scroll) * zoom_speed;
+        cameraa.fovy = Clamp(cameraa.fovy, 1.0f, 180.0f);
     }
+    // else {
+    //     EnableCursor();
+    //     *user_camera_input = false;
+    //     // *camera_mode = CAMERA_FREE;
+    // }      
 }
+
 
 void keyboard_input(){
     // if (IsKeyDown(KEY_SPACE)){
@@ -234,7 +260,7 @@ void keyboard_input(){
         // }
 }
 
-void camera_change(int camera_mode){
+void camera_change(){
     // if (camera_mode == 1)
     //     DrawText(TextFormat("Camera Mode: %s", "Free Camera"), 10, HEIGHT - 20, 10, BLACK);
     // if (camera_mode == 2)
